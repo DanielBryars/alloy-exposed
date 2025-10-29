@@ -1,4 +1,4 @@
-FROM ghcr.io/grafana/alloy:latest
+FROM grafana/alloy:latest
 
 LABEL description="Grafana Alloy with OTLP endpoints exposed for telemetry collection"
 LABEL version="1.0"

@@ -1,0 +1,53 @@
+otelcol.receiver.otlp "default" {
+  grpc {}                          // 0.0.0.0:4317
+  http {}                          // 0.0.0.0:4318
+  output {
+    traces  = [otelcol.processor.attributes.force_host_id.input]
+    metrics = [otelcol.processor.batch.default.input]
+    logs    = [otelcol.processor.batch.default.input]
+  }
+}
+
+// Force a stable host.id for Grafana Cloud host-hours
+otelcol.processor.attributes "force_host_id" {
+  action {
+    key    = "host.id"
+    action = "insert"
+    value  = "neo-hst-prod-sender-id"
+  }
+
+  output {
+    traces = [
+      otelcol.connector.host_info.default.input,
+      otelcol.processor.batch.default.input,
+    ]
+  }
+}
+
+// Generate host-hours metric (traces_host_info with grafana_host_id)
+otelcol.connector.host_info "default" {
+  host_identifiers = ["host.id", "host.name"]
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    logs    = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    traces  = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = env("GRAFANA_CLOUD_OTLP_ENDPOINT")
+    auth     = otelcol.auth.basic.grafana_cloud.handler
+  }
+}
+
+otelcol.auth.basic "grafana_cloud" {
+  username = env("GRAFANA_CLOUD_INSTANCE_ID")
+  password = env("GRAFANA_CLOUD_API_KEY")
+}
